@@ -128,7 +128,7 @@ chatForm.addEventListener("submit", async (e) => {
   }
 });
 
-// 1. 책 데이터 로드 & 렌더링
+// 1. JSON
 const BOOKS_JSON_URL =
   "https://raw.githubusercontent.com/watermin-hub/1205_api_practice/refs/heads/main/books_yes24.json";
 
