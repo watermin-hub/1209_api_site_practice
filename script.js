@@ -158,6 +158,12 @@ const GOODS_JSON_URL =
 let booksData = [];
 let goodsData = [];
 
+const categoryGoodsMap = {
+  국내도서_경제경영: "학습/독서",
+  국내도서_IT: "디지털",
+  국내도서_자기계발: "디자인문구",
+};
+
 async function loadAllData() {
   const [books, goods] = await Promise.all([
     fetch(BOOKS_JSON_URL),
@@ -176,7 +182,6 @@ async function loadAllData() {
 window.addEventListener("DOMContentLoaded", loadAllData);
 
 // 3. 카테고리 드롭다운 생성
-
 function populateCategoryDropdown() {
   const categorySelect = document.getElementById("categorySelect");
   categorySelect.innerHTML = "";
@@ -240,12 +245,66 @@ function applyFilters() {
     return inCategory && inSearch;
   });
   renderBooks(filtered);
+
+  // 굿즈 검색 및 렌더링을 위한 코드
   if (q) {
     renderRelatedGoods(q, filtered);
   } else {
     const goodsContainer = document.getElementById("relatedGoods");
     if (goodsContainer) goodsContainer.innerHTML = "";
   }
+}
+
+// 10. 검색어 기반 관련 굿즈 출력
+function renderRelatedGoods(keyword, filteredBooks) {
+  const container = document.getElementById("relatedGoods");
+  if (!container) return;
+  container.innerHTML = "";
+  if (filteredBooks.length === 0) return;
+  const bookCategories = Array.from(
+    new Set(filteredBooks.map((b) => b.category))
+  );
+  bookCategories.forEach((bookCat) => {
+    const goodsCat = categoryGoodsMap[bookCat];
+    if (!goodsCat) return;
+    let related = goodsData.filter(
+      (item) =>
+        item.category === goodsCat &&
+        keyword &&
+        item.title &&
+        item.title.toLowerCase().includes(keyword.toLowerCase())
+    );
+    if (related.length === 0) {
+      related = goodsData.filter((item) => item.category === goodsCat);
+    }
+    related = related.slice(0, 10);
+    if (related.length === 0) return;
+    const section = document.createElement("section");
+    section.className = "goods-section";
+    section.innerHTML = `
+      <h3>${bookCat} 검색("${keyword}") 관련 굿즈 – ${goodsCat} 추천</h3>
+    `;
+    const list = document.createElement("div");
+    list.className = "goods-list";
+    related.forEach((item) => {
+      const card = document.createElement("article");
+      card.className = "goods-card";
+      card.innerHTML = `
+        <a href="${item.detail_url}" target="_blank" rel="noopener noreferrer">
+          <img src="${item.thumbnail || ""}" alt="${item.title || ""}" />
+          <p class="goods-title">${item.title || ""}</p>
+          ${
+            item.price
+              ? `<p class="goods-price">${item.price.toLocaleString()}원</p>`
+              : ""
+          }
+        </a>
+      `;
+      list.appendChild(card);
+    });
+    section.appendChild(list);
+    container.appendChild(section);
+  });
 }
 
 // 6. 책 검색 필터 실제 적용
