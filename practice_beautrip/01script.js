@@ -1,7 +1,7 @@
-// ==== 7. Firebase Init ====
+//  7. Firebase 연동
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
-// Firebase Auth
+// firebase-auth
 import {
   getAuth,
   GithubAuthProvider,
@@ -10,7 +10,7 @@ import {
   signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// Firebase Firestore
+// firestore
 import {
   getFirestore,
   collection,
@@ -21,7 +21,7 @@ import {
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// Firebase Storage
+// firebase-storage
 import {
   getStorage,
   ref,
@@ -43,6 +43,7 @@ const auth = getAuth(app);
 const provider = new GithubAuthProvider();
 const db = getFirestore(app);
 const storage = getStorage(app);
+// app이라는 변수에 우리의 github정보가 들어있기 때문에 app으로 연결시켜주는 건가벼~
 
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
@@ -64,14 +65,14 @@ onAuthStateChanged(auth, (user) => {
     logoutBtn.style.display = "inline-block";
     chatBox.style.display = "block";
   } else {
-    userInfo.textContent = "로그인하지 않았습니다.";
+    userInfo.textContent = "로그인되지 않았습니다.";
     loginBtn.style.display = "inline-block";
     logoutBtn.style.display = "none";
     chatBox.style.display = "none";
   }
 });
 
-// ==== 8. Firebase Chat ====
+// 8. 실시간 채팅 기능 구현
 const chatMessages = document.getElementById("chatMessages");
 const chatForm = document.getElementById("chatForm");
 const chatInput = document.getElementById("chatInput");
@@ -127,34 +128,55 @@ chatForm.addEventListener("submit", async (e) => {
   }
 });
 
-// ==== 1. 책 & 굿즈 데이터 로드 & 렌더링 ====
+// 1. JSON
 const BOOKS_JSON_URL =
-  "https://raw.githubusercontent.com/Divjason/finalProject_api/refs/heads/main/books_yes24.json";
+  "https://raw.githubusercontent.com/watermin-hub/1205_api_practice/refs/heads/main/books_yes24.json";
 
 const GOODS_JSON_URL =
-  "https://raw.githubusercontent.com/Divjason/finalProject_api/refs/heads/main/goods_yes24.json";
+  "https://raw.githubusercontent.com/watermin-hub/1205_api_practice/refs/heads/main/goods_yes24.json";
 
+// 우리는 api 많아서 객체 형태로 끌어와야 함!!!!!!
+// const API_URL = {
+//   api1:"",
+//   api1:"",
+//   api1:"",
+//   api1:"",
+// }
+
+// 지난 수업!
+// let allBooks = [];
+// async function loadBooks() {
+//   const res = await fetch(API_URL);
+//   allBooks = await res.json();
+//   // 이거 비동기처리라서 url찾기도 전에 json 변환할 수도 있어서 await 꼭 적어줘야 함
+//   console.log(allBooks);
+//   // 이 함수가 allBooks 값을 출력함
+//   renderBooks(allBooks);
+// }
+
+// 1. 데이터 로드 & 렌더링 <??? 맞나?
 let booksData = [];
 let goodsData = [];
 
 async function loadAllData() {
-  const [booksRes, goodsRes] = await Promise.all([
+  const [books, goods] = await Promise.all([
     fetch(BOOKS_JSON_URL),
     fetch(GOODS_JSON_URL),
   ]);
 
-  booksData = await booksRes.json();
-  goodsData = await goodsRes.json();
+  booksData = await books.json();
+  goodsData = await goods.json();
 
   populateCategoryDropdown();
 
   renderBooks(booksData);
 }
 
-// ==== 2. 브라우저 스캔 후 데이터 로드 및 렌더링 실행 ====
-window.addEventListener("DOMContentLoaded", loadAllData);
+// 2. 브라우저 스캔 후 데이터 로드 및 렌더링 실행
+window.addEventListener("load", loadAllData);
 
-// ==== 3. 카테고리 드롭다운 메뉴 생성 ====
+// 3. 카테고리 드롭다운 생성
+
 function populateCategoryDropdown() {
   const categorySelect = document.getElementById("categorySelect");
   categorySelect.innerHTML = "";
@@ -169,20 +191,17 @@ function populateCategoryDropdown() {
   });
 }
 
-// ==== 4. 책 정보 API 활용 화면 출력 ====
+// 4. 책 목록 렌더링 - API 활용 생성
 function renderBooks(books) {
   const listEl = document.getElementById("bookList");
   listEl.innerHTML = "";
-
   books.forEach((book) => {
     const card = document.createElement("article");
     card.className = "book-card";
-
     const url = book.detail_url || "#";
-
     card.innerHTML = `
       <a href="${url}" target="_blank" rel="noopener noreferrer">
-        <img src="${book.thumbnail || ""}" alt="${book.title || ""}" />
+        <img src="${book.thumb || ""}" alt="${book.title || ""}" />
       </a>
       <h3>
         <a href="${url}" target="_blank" rel="noopener noreferrer">
@@ -200,25 +219,24 @@ function renderBooks(books) {
     }</p>
       <button type="button">댓글 보기</button>
     `;
-
     const btn = card.querySelector("button");
     btn.addEventListener("click", () => openCommentSection(book));
-
     listEl.appendChild(card);
   });
 }
 
-// ==== 5. 책 검색 필터 함수 ====
+// 실질적으로 카테고리가 적용되게 만드는 함수
+// 5. 책 검색 & 필터 함수
 function applyFilters() {
-  const qRaw = document.getElementById("searchInput").value;
-  const q = qRaw.trim().toLowerCase();
-  const cat = document.getElementById("categorySelect").value;
+  const qRaw = document.getElementById("searchInput").value; // 검색어
+  const q = qRaw.trim().toLowerCase(); // 검색어 정규화
+  const cat = document.getElementById("categorySelect").value; // 카테고리
   const filtered = booksData.filter((book) => {
-    const inCategory = !cat || cat === "all" ? true : book.category === cat;
+    const inCategory = !cat || cat === "all" ? true : book.category === cat; // 카테고리 필터링
     const text = `${book.title || ""} ${book.author || ""} ${
       book.publisher || ""
-    }`.toLowerCase();
-    const inSearch = q ? text.includes(q) : true;
+    }`.toLowerCase(); // 검색어 필터링
+    const inSearch = q ? text.includes(q) : true; // 검색어 필터링
     return inCategory && inSearch;
   });
   renderBooks(filtered);
@@ -230,7 +248,7 @@ function applyFilters() {
   }
 }
 
-// ==== 6. 책 검색 필터 기능 실행 ====
+// 6. 책 검색 필터 실제 적용
 document.getElementById("searchInput").addEventListener("input", applyFilters);
 document
   .getElementById("categorySelect")
