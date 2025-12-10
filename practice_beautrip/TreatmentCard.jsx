@@ -35,9 +35,7 @@ const TreatmentCard = ({ treatment }) => {
           loading="lazy"
           onError={handleImageError}
         />
-        {discountRate && (
-          <div className="discount-overlay">{discountRate}</div>
-        )}
+        {discountRate && <div className="discount-overlay">{discountRate}</div>}
       </div>
 
       <div className="treatment-content">
@@ -96,4 +94,3 @@ const TreatmentCard = ({ treatment }) => {
 };
 
 export default TreatmentCard;
-

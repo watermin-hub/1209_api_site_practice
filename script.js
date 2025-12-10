@@ -1,6 +1,7 @@
 //  7. Firebase 연동
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
+// firebase-auth
 import {
   getAuth,
   GithubAuthProvider,
@@ -8,6 +9,25 @@ import {
   onAuthStateChanged,
   signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+// firestore
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// firebase-storage
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBCp77ilH7USjTD_76J8crJskpJ1rzF87o",
@@ -21,6 +41,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GithubAuthProvider();
+const db = getFirestore(app);
+const storage = getStorage(app);
+// app이라는 변수에 우리의 github정보가 들어있기 때문에 app으로 연결시켜주는 건가벼~
 
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
@@ -46,6 +69,62 @@ onAuthStateChanged(auth, (user) => {
     loginBtn.style.display = "inline-block";
     logoutBtn.style.display = "none";
     chatBox.style.display = "none";
+  }
+});
+
+// 8. 실시간 채팅 기능 구현
+const chatMessages = document.getElementById("chatMessages");
+const chatForm = document.getElementById("chatForm");
+const chatInput = document.getElementById("chatInput");
+
+const messagesRef = collection(db, "messages");
+const qMessages = query(messagesRef, orderBy("created_at", "asc"));
+onSnapshot(qMessages, (snapshot) => {
+  chatMessages.innerHTML = "";
+  snapshot.forEach((doc) => {
+    const data = doc.data();
+    const li = document.createElement("li");
+    let html = `<strong>${data.user_name}</strong>: ${data.text || ""}`;
+    if (data.imageUrl) {
+      html += `<br /><img src="${data.imageUrl}" alt="image" style="max-width:200px; border-radius:8px; margin-top:4px;" />`;
+    }
+    li.innerHTML = html;
+    chatMessages.appendChild(li);
+  });
+});
+const chatImageInput = document.getElementById("chatImage");
+chatForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const user = auth.currentUser;
+  if (!user) {
+    alert("먼저 GitHub로 로그인 해주세요.");
+    return;
+  }
+  const text = chatInput.value;
+  const file = chatImageInput.files[0];
+  if (!text.trim() && !file) {
+    return;
+  }
+  let imageUrl = null;
+  try {
+    if (file) {
+      const filePath = `chatImages/${user.uid}/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, filePath);
+      await uploadBytes(storageRef, file);
+      imageUrl = await getDownloadURL(storageRef);
+    }
+    await addDoc(messagesRef, {
+      user_id: user.uid,
+      user_name: user.displayName || user.email,
+      text,
+      imageUrl,
+      created_at: serverTimestamp(),
+    });
+    chatInput.value = "";
+    chatImageInput.value = "";
+  } catch (err) {
+    console.error("채팅 저장 오류:", err);
+    alert("메시지를 전송하는 중 오류가 발생했습니다.");
   }
 });
 
