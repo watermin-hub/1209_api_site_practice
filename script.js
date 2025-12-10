@@ -253,3 +253,82 @@ document.getElementById("searchInput").addEventListener("input", applyFilters);
 document
   .getElementById("categorySelect")
   .addEventListener("change", applyFilters);
+
+// 9. 카메라 열기 / 캡처 / 닫기
+const cameraButton = document.getElementById("cameraButton");
+const cameraArea = document.getElementById("cameraArea");
+const cameraPreview = document.getElementById("cameraPreview");
+const captureButton = document.getElementById("captureButton");
+const closeCameraButton = document.getElementById("closeCameraButton");
+
+// 카메라 켜기
+let cameraStream = null;
+cameraButton.addEventListener("click", async () => {
+  try {
+    if (cameraStream) {
+      cameraArea.classList.remove("hidden");
+      return;
+    }
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    cameraPreview.srcObject = cameraStream;
+    cameraArea.classList.remove("hidden");
+  } catch (err) {
+    console.error("카메라 접근 실패:", err);
+    alert("카메라를 사용할 수 없습니다. 브라우저 권한을 확인해주세요.");
+  }
+});
+
+// 카메라 끄기
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach((track) => track.stop());
+    cameraStream = null;
+  }
+  cameraArea.classList.add("hidden");
+}
+closeCameraButton.addEventListener("click", stopCamera);
+
+// 캡처(카메라 촬영) 기능
+captureButton.addEventListener("click", () => {
+  if (!cameraStream) return;
+  const user = auth.currentUser;
+  if (!user) {
+    alert("먼저 GitHub로 로그인 해주세요.");
+    return;
+  }
+  const track = cameraStream.getVideoTracks()[0];
+  const settings = track.getSettings();
+  const width = settings.width || 640;
+  const height = settings.height || 480;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(cameraPreview, 0, 0, width, height);
+  canvas.toBlob(
+    async (blob) => {
+      if (!blob) return;
+      try {
+        const filePath = `chatImages/${user.uid}/${Date.now()}_camera.jpg`;
+        const storageRef = ref(storage, filePath);
+        await uploadBytes(storageRef, blob);
+        const imageUrl = await getDownloadURL(storageRef);
+        const text = chatInput.value;
+        await addDoc(messagesRef, {
+          user_id: user.uid,
+          user_name: user.displayName || user.email,
+          text,
+          imageUrl,
+          created_at: serverTimestamp(),
+        });
+        chatInput.value = "";
+        stopCamera(); // 촬영 후 카메라 닫기
+      } catch (err) {
+        console.error("촬영 이미지 전송 오류:", err);
+        alert("사진을 전송하는 중 오류가 발생했습니다.");
+      }
+    },
+    "image/jpeg",
+    0.9
+  );
+});
