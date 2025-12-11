@@ -232,8 +232,10 @@ function renderBooks(books) {
     }</p>
       <button type="button">댓글 보기</button>
     `;
+
     const btn = card.querySelector("button");
     btn.addEventListener("click", () => openCommentSection(book));
+
     listEl.appendChild(card);
   });
 }
@@ -323,6 +325,15 @@ function renderRelatedGoods(keyword, filteredBooks) {
 // Read : 타인이 읽을 수 있어야함
 // Update : 타인이 수정할 수 있는 권한 (우리는 안 쓸거임 코드 길어져서)
 // Delete : 댓글 삭제 기능
+
+// 댓글 버튼 클릭 이벤트 함수
+function openCommentSection(book) {
+  selectedBook = book;
+  document.getElementById(
+    "commentBookTitle"
+  ).textContent = `댓글 - ${book.title}`;
+  loadComments(book);
+}
 
 // 댓글 삭제 D : Delete
 async function deleteComment(id) {
