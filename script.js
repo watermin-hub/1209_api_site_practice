@@ -162,11 +162,15 @@ const SUPABASE_TABLE = "comments";
 let booksData = [];
 let goodsData = [];
 
+// bookData와 goodsData를 매핑해주는 객체
 const categoryGoodsMap = {
   국내도서_경제경영: "학습/독서",
   국내도서_IT: "디지털",
   국내도서_자기계발: "디자인문구",
 };
+
+let selectedBook = null;
+// const <-> let : const는 변수 재할당 불가, let은 변수 재할당 가능
 
 async function loadAllData() {
   const [books, goods] = await Promise.all([
