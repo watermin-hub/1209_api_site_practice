@@ -1,7 +1,7 @@
-// ==== 7. Firebase Init ====
+//  7. Firebase 연동
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
-// Firebase Auth
+// firebase-auth
 import {
   getAuth,
   GithubAuthProvider,
@@ -10,7 +10,7 @@ import {
   signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// Firebase Firestore
+// firestore
 import {
   getFirestore,
   collection,
@@ -21,7 +21,7 @@ import {
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// Firebase Storage
+// firebase-storage
 import {
   getStorage,
   ref,
@@ -43,6 +43,7 @@ const auth = getAuth(app);
 const provider = new GithubAuthProvider();
 const db = getFirestore(app);
 const storage = getStorage(app);
+// app이라는 변수에 우리의 github정보가 들어있기 때문에 app으로 연결시켜주는 건가벼~
 
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
@@ -64,14 +65,14 @@ onAuthStateChanged(auth, (user) => {
     logoutBtn.style.display = "inline-block";
     chatBox.style.display = "block";
   } else {
-    userInfo.textContent = "로그인하지 않았습니다.";
+    userInfo.textContent = "로그인되지 않았습니다.";
     loginBtn.style.display = "inline-block";
     logoutBtn.style.display = "none";
     chatBox.style.display = "none";
   }
 });
 
-// ==== 8. Firebase Chat ====
+// 8. 실시간 채팅 기능 구현
 const chatMessages = document.getElementById("chatMessages");
 const chatForm = document.getElementById("chatForm");
 const chatInput = document.getElementById("chatInput");
@@ -127,7 +128,7 @@ chatForm.addEventListener("submit", async (e) => {
   }
 });
 
-// ==== 1. 책 & 굿즈 데이터 API 로드 & 렌더링 ====
+// 1. JSON
 const BOOKS_JSON_URL =
   "https://raw.githubusercontent.com/watermin-hub/1205_api_practice/refs/heads/main/books_yes24.json";
 
@@ -139,10 +140,29 @@ const SUPABASE_URL = "https://esvmyvqpgcsmjpcnqusd.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_YtlaYb2dkhexJykX60GxTw_rORvh_W3";
 const SUPABASE_TABLE = "comments";
 
+// 우리는 api 많아서 객체 형태로 끌어와야 함!!!!!!
+// const API_URL = {
+//   api1:"",
+//   api1:"",
+//   api1:"",
+//   api1:"",
+// }
+
+// 지난 수업!
+// let allBooks = [];
+// async function loadBooks() {
+//   const res = await fetch(API_URL);
+//   allBooks = await res.json();
+//   // 이거 비동기처리라서 url찾기도 전에 json 변환할 수도 있어서 await 꼭 적어줘야 함
+//   console.log(allBooks);
+//   // 이 함수가 allBooks 값을 출력함
+//   renderBooks(allBooks);
+// }
+
 let booksData = [];
 let goodsData = [];
 
-// booksData & goodsData
+// bookData와 goodsData를 매핑해주는 객체
 const categoryGoodsMap = {
   국내도서_경제경영: "학습/독서",
   국내도서_IT: "디지털",
@@ -150,28 +170,26 @@ const categoryGoodsMap = {
 };
 
 let selectedBook = null;
-// const, let, var
-
-let pinnedSet = new Set();
+// const <-> let : const는 변수 재할당 불가, let은 변수 재할당 가능
 
 async function loadAllData() {
-  const [booksRes, goodsRes] = await Promise.all([
+  const [books, goods] = await Promise.all([
     fetch(BOOKS_JSON_URL),
     fetch(GOODS_JSON_URL),
   ]);
 
-  booksData = await booksRes.json();
-  goodsData = await goodsRes.json();
+  booksData = await books.json();
+  goodsData = await goods.json();
 
   populateCategoryDropdown();
 
   renderBooks(booksData);
 }
 
-// ==== 2. 브라우저 스캔 후 데이터 로드 및 렌더링 실행 ====
+// 2. 브라우저 스캔 후 데이터 로드 및 렌더링 실행
 window.addEventListener("DOMContentLoaded", loadAllData);
 
-// ==== 3. 카테고리 드롭다운 메뉴 생성 ====
+// 3. 카테고리 드롭다운 생성
 function populateCategoryDropdown() {
   const categorySelect = document.getElementById("categorySelect");
   categorySelect.innerHTML = "";
@@ -186,18 +204,14 @@ function populateCategoryDropdown() {
   });
 }
 
-// ==== 4. 책 정보 API 활용 화면 출력 ====
+// 4. 책 목록 렌더링 - API 활용 생성
 function renderBooks(books) {
   const listEl = document.getElementById("bookList");
   listEl.innerHTML = "";
-
   books.forEach((book) => {
     const card = document.createElement("article");
     card.className = "book-card";
-    const isPinned = pinnedSet.has(book.detail_url);
-
     const url = book.detail_url || "#";
-
     card.innerHTML = `
       <div class="book-thumb-wrap">
         <img src="${book.thumbnail}" alt="${book.title}">
@@ -216,42 +230,85 @@ function renderBooks(books) {
       <button class="comment-open-btn detail-btn">댓글 보기</button>
     `;
 
-    const commentBtn = card.querySelector(".comment-open-btn");
-    commentBtn.addEventListener("click", () => openCommentSection(book));
+    const btn = card.querySelector("button");
+    btn.addEventListener("click", () => openCommentSection(book));
 
     listEl.appendChild(card);
   });
-
-  const pinButtons = listEl.querySelectorAll(".pin-btn");
-  pinButtons.forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const book = {
-        detail_url: btn.dataset.detailUrl,
-        title: btn.dataset.title,
-        thumbnail: btn.dataset.thumbnail,
-      };
-      togglePin(book, btn);
-    });
-  });
 }
 
-// ==== 5. 책 검색 필터 함수 ====
+async function togglePin(book, buttonEl) {
+  const user = auth.currentUser;
+  if (!user) {
+    alert("로그인 후 스크랩 기능을 사용할 수 있습니다.");
+    return;
+  }
+  const bookUrl = book.detail_url;
+  const isPinned = pinnedSet.has(bookUrl);
+  if (!isPinned) {
+    const payload = {
+      firebase_uid: user.uid,
+      book_url: bookUrl,
+      title: book.title,
+      thumbnail: book.thumbnail,
+    };
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/favorites`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      console.error("스크랩 저장 실패", await res.text());
+      alert("스크랩 저장 중 오류가 발생했습니다.");
+      return;
+    }
+    pinnedSet.add(bookUrl);
+    buttonEl.classList.add("pinned");
+  } else {
+    const deleteUrl =
+      `${SUPABASE_URL}/rest/v1/favorites` +
+      `?firebase_uid=eq.${user.uid}` +
+      `&book_url=eq.${encodeURIComponent(bookUrl)}`;
+    const res = await fetch(deleteUrl, {
+      method: "DELETE",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Prefer: "return=minimal",
+      },
+    });
+    if (!res.ok) {
+      console.error("스크랩 삭제 실패", await res.text());
+      alert("스크랩 삭제 중 오류가 발생했습니다.");
+      return;
+    }
+    pinnedSet.delete(bookUrl);
+    buttonEl.classList.remove("pinned");
+  }
+}
+
+// 실질적으로 카테고리가 적용되게 만드는 함수
+// 5. 책 검색 & 필터 함수
 function applyFilters() {
-  const qRaw = document.getElementById("searchInput").value;
-  const q = qRaw.trim().toLowerCase();
-  const cat = document.getElementById("categorySelect").value;
+  const qRaw = document.getElementById("searchInput").value; // 검색어
+  const q = qRaw.trim().toLowerCase(); // 검색어 정규화
+  const cat = document.getElementById("categorySelect").value; // 카테고리
   const filtered = booksData.filter((book) => {
-    const inCategory = !cat || cat === "all" ? true : book.category === cat;
+    const inCategory = !cat || cat === "all" ? true : book.category === cat; // 카테고리 필터링
     const text = `${book.title || ""} ${book.author || ""} ${
       book.publisher || ""
-    }`.toLowerCase();
-    const inSearch = q ? text.includes(q) : true;
+    }`.toLowerCase(); // 검색어 필터링
+    const inSearch = q ? text.includes(q) : true; // 검색어 필터링
     return inCategory && inSearch;
   });
   renderBooks(filtered);
 
-  // 굿즈 검색 및 렌더링
+  // 굿즈 검색 및 렌더링을 위한 코드
   if (q) {
     renderRelatedGoods(q, filtered);
   } else {
@@ -260,23 +317,18 @@ function applyFilters() {
   }
 }
 
-// ==== 10. 검색어 기반 연관 굿즈 출력 ====
+// 10. 검색어 기반 관련 굿즈 출력
 function renderRelatedGoods(keyword, filteredBooks) {
   const container = document.getElementById("relatedGoods");
   if (!container) return;
-
   container.innerHTML = "";
-
   if (filteredBooks.length === 0) return;
-
   const bookCategories = Array.from(
     new Set(filteredBooks.map((b) => b.category))
   );
-
   bookCategories.forEach((bookCat) => {
     const goodsCat = categoryGoodsMap[bookCat];
     if (!goodsCat) return;
-
     let related = goodsData.filter(
       (item) =>
         item.category === goodsCat &&
@@ -284,25 +336,18 @@ function renderRelatedGoods(keyword, filteredBooks) {
         item.title &&
         item.title.toLowerCase().includes(keyword.toLowerCase())
     );
-
     if (related.length === 0) {
       related = goodsData.filter((item) => item.category === goodsCat);
     }
-
     related = related.slice(0, 10);
-
     if (related.length === 0) return;
-
     const section = document.createElement("section");
     section.className = "goods-section";
-
     section.innerHTML = `
       <h3>${bookCat} 검색("${keyword}") 관련 굿즈 – ${goodsCat} 추천</h3>
     `;
-
     const list = document.createElement("div");
     list.className = "goods-list";
-
     related.forEach((item) => {
       const card = document.createElement("article");
       card.className = "goods-card";
@@ -319,20 +364,19 @@ function renderRelatedGoods(keyword, filteredBooks) {
       `;
       list.appendChild(card);
     });
-
     section.appendChild(list);
     container.appendChild(section);
   });
 }
 
-// ==== 11. Supabase 댓글 렌더링 ====
+// 11. Supabase 댓글 렌더링
 // 준 Fullstack : 프론트 + 백엔드
 // CRUD
 // 사이트구축.플랫폼 => CRUD
 // Create : 댓글 작성
-// Read : 타인 읽음
-// Update : x
-// Delete : 댓글 삭제
+// Read : 타인이 읽을 수 있어야함
+// Update : 타인이 수정할 수 있는 권한 (우리는 안 쓸거임 코드 길어져서)
+// Delete : 댓글 삭제 기능
 
 // 댓글 버튼 클릭 이벤트 함수
 function openCommentSection(book) {
@@ -343,7 +387,7 @@ function openCommentSection(book) {
   loadComments(book);
 }
 
-// 댓글 삭제 = D = Delete
+// 댓글 삭제 D : Delete
 async function deleteComment(id) {
   if (!confirm("정말 이 댓글을 삭제할까요?")) return;
   const res = await fetch(
@@ -365,7 +409,7 @@ async function deleteComment(id) {
   await loadComments(selectedBook);
 }
 
-// 댓글 조회 = R = Read
+// 댓글 조회 R : Read
 async function loadComments(book) {
   const listEl = document.getElementById("commentList");
   listEl.innerHTML = "<li>댓글 불러오는 중...</li>";
@@ -383,7 +427,7 @@ async function loadComments(book) {
     listEl.innerHTML = "";
     const user = auth.currentUser;
     if (rows.length === 0) {
-      listEl.innerHTML = "<li>첫 번째 댓글을 남겨보세요 🤠</li>";
+      listEl.innerHTML = "<li>첫 번째 댓글을 남겨보세요 😊</li>";
     } else {
       rows.forEach((row) => {
         const li = document.createElement("li");
@@ -407,30 +451,26 @@ async function loadComments(book) {
   }
 }
 
-// 댓글 생성 = C = Create
+// 댓글 생성 C : Create
 async function submitComment(e) {
   e.preventDefault();
   if (!selectedBook) {
     alert("먼저 책을 선택해주세요.");
     return;
   }
-
-  const user = auth.currentUser;
+  const user = auth.currentUser; // Firebase 로그인 유저
   if (!user) {
     alert("댓글을 남기려면 먼저 GitHub로 로그인 해주세요.");
     return;
   }
-
   const nickname = document.getElementById("commentNickname").value;
   const text = document.getElementById("commentText").value;
-
   const payload = {
     book_url: selectedBook.detail_url,
     nickname,
     comment_text: text,
     firebase_uid: user.uid,
   };
-
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
       method: "POST",
@@ -442,9 +482,7 @@ async function submitComment(e) {
       },
       body: JSON.stringify(payload),
     });
-
     if (!res.ok) throw new Error("댓글 저장 실패");
-
     document.getElementById("commentText").value = "";
     await loadComments(selectedBook);
   } catch (err) {
@@ -458,89 +496,9 @@ document
   .getElementById("commentForm")
   .addEventListener("submit", submitComment);
 
-// 내 댓글 단어/감성 분석
-function analyzeComments(text) {
-  const stopWords = [
-    "은",
-    "는",
-    "이",
-    "가",
-    "을",
-    "를",
-    "에",
-    "의",
-    "와",
-    "과",
-    "도",
-    "으로",
-    "에서",
-    "입니다",
-    "정말",
-    "근데",
-    "하고",
-    "안데",
-  ];
+// --------------------------------------------------
 
-  const posWords = [
-    "좋아",
-    "재미",
-    "유익",
-    "감동",
-    "추천",
-    "최고",
-    "만족",
-    "훌륭",
-    "기대",
-    "가능",
-    "정말",
-  ];
-
-  const negWords = [
-    "별로",
-    "지루",
-    "최악",
-    "실망",
-    "아쉽",
-    "불편",
-    "복잡",
-    "싫",
-  ];
-
-  const cleaned = text.replace(/[^\p{L}0-9\s]/gu, " ");
-  const tokens = cleaned
-    .split(/\s+/)
-    .map((w) => w.trim())
-    .filter((w) => w && !stopWords.includes(w));
-  const freq = new Map();
-  for (const t of tokens) {
-    freq.set(t, (freq.get(t) || 0) + 1);
-  }
-  const topWords = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
-  let posCount = 0;
-  let negCount = 0;
-  const posHit = new Map();
-  const negHit = new Map();
-  for (const token of tokens) {
-    if (posWords.some((p) => token.includes(p))) {
-      posCount++;
-      posHit.set(token, (posHit.get(token) || 0) + 1);
-    }
-    if (negWords.some((n) => token.includes(n))) {
-      negCount++;
-      negHit.set(token, (negHit.get(token) || 0) + 1);
-    }
-  }
-  const posTop = [...posHit.entries()].sort((a, b) => b[1] - a[1]);
-  const negTop = [...negHit.entries()].sort((a, b) => b[1] - a[1]);
-  return {
-    topWords,
-    posCount,
-    negCount,
-    totalWords: tokens.length,
-    posTop,
-    negTop,
-  };
-}
+// 댓글 ㅂ ㄹ 그
 
 // 댓글 모아보기 모달 페이지
 async function openMyCommentsModal() {
@@ -637,22 +595,25 @@ myCommentsModal.addEventListener("click", (e) => {
   }
 });
 
-// ==== 6. 책 검색 필터 기능 실행 ====
+// --------------------------------------------------
+
+// 6. 책 검색 필터 실제 적용
 document.getElementById("searchInput").addEventListener("input", applyFilters);
 document
   .getElementById("categorySelect")
   .addEventListener("change", applyFilters);
 
-// ==== 9. 카메라 열기 / 캡처 / 닫기 실행 ====
+// --------------------------------------------------
+
+// 9. 카메라 열기 / 캡처 / 닫기
 const cameraButton = document.getElementById("cameraButton");
 const cameraArea = document.getElementById("cameraArea");
 const cameraPreview = document.getElementById("cameraPreview");
 const captureButton = document.getElementById("captureButton");
 const closeCameraButton = document.getElementById("closeCameraButton");
 
+// 카메라 켜기
 let cameraStream = null;
-
-// 카메라 켜기 기능
 cameraButton.addEventListener("click", async () => {
   try {
     if (cameraStream) {
@@ -668,7 +629,7 @@ cameraButton.addEventListener("click", async () => {
   }
 });
 
-// 카메라 끄기 기능
+// 카메라 끄기
 function stopCamera() {
   if (cameraStream) {
     cameraStream.getTracks().forEach((track) => track.stop());
@@ -678,7 +639,7 @@ function stopCamera() {
 }
 closeCameraButton.addEventListener("click", stopCamera);
 
-// 카메라 촬영 기능
+// 캡처(카메라 촬영) 기능
 captureButton.addEventListener("click", () => {
   if (!cameraStream) return;
   const user = auth.currentUser;
@@ -712,7 +673,7 @@ captureButton.addEventListener("click", () => {
           created_at: serverTimestamp(),
         });
         chatInput.value = "";
-        stopCamera();
+        stopCamera(); // 촬영 후 카메라 닫기
       } catch (err) {
         console.error("촬영 이미지 전송 오류:", err);
         alert("사진을 전송하는 중 오류가 발생했습니다.");
@@ -721,109 +682,4 @@ captureButton.addEventListener("click", () => {
     "image/jpeg",
     0.9
   );
-});
-
-// ==== 12. 스크랩 모달창 오픈 & 데이터 렌더링 ====
-async function togglePin(book, buttonEl) {
-  const user = auth.currentUser;
-  if (!user) {
-    alert("로그인 후 스크랩 기능을 사용할 수 있습니다.");
-    return;
-  }
-  const bookUrl = book.detail_url;
-  const isPinned = pinnedSet.has(bookUrl);
-  if (!isPinned) {
-    const payload = {
-      firebase_uid: user.uid,
-      book_url: bookUrl,
-      title: book.title,
-      thumbnail: book.thumbnail,
-    };
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/favorites`, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "return=minimal",
-      },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      console.error("스크랩 저장 실패", await res.text());
-      alert("스크랩 저장 중 오류가 발생했습니다.");
-      return;
-    }
-    pinnedSet.add(bookUrl);
-    buttonEl.classList.add("pinned");
-  } else {
-    const deleteUrl =
-      `${SUPABASE_URL}/rest/v1/favorites` +
-      `?firebase_uid=eq.${user.uid}` +
-      `&book_url=eq.${encodeURIComponent(bookUrl)}`;
-    const res = await fetch(deleteUrl, {
-      method: "DELETE",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        Prefer: "return=minimal",
-      },
-    });
-    if (!res.ok) {
-      console.error("스크랩 삭제 실패", await res.text());
-      alert("스크랩 삭제 중 오류가 발생했습니다.");
-      return;
-    }
-    pinnedSet.delete(bookUrl);
-    buttonEl.classList.remove("pinned");
-  }
-}
-
-async function openMyPinsModal() {
-  const user = auth.currentUser;
-  if (!user) {
-    alert("로그인 후 내 스크랩을 볼 수 있습니다.");
-    return;
-  }
-
-  const url = `${SUPABASE_URL}/rest/v1/favorites?firebase_uid=eq.${user.uid}&order=created_at.desc`;
-  const res = await fetch(url, {
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
-  });
-  const rows = await res.json();
-
-  const listEl = document.getElementById("myPinsList");
-  listEl.innerHTML = "";
-
-  if (rows.length === 0) {
-    listEl.innerHTML = "<li>아직 스크랩한 책이 없습니다 🙂</li>";
-  } else {
-    rows.forEach((row) => {
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <a href="${row.book_url}" target="_blank" class="my-pin-item">
-          ${
-            row.thumbnail
-              ? `<img src="${row.thumbnail}" alt="${row.title}">`
-              : ""
-          }
-          <span>${row.title}</span>
-        </a>
-      `;
-      listEl.appendChild(li);
-    });
-  }
-
-  document.getElementById("myPinsModal").classList.remove("hidden");
-}
-
-document
-  .getElementById("openMyPinsModal")
-  .addEventListener("click", openMyPinsModal);
-
-document.getElementById("closeMyPinsModal").addEventListener("click", () => {
-  document.getElementById("myPinsModal").classList.add("hidden");
 });
