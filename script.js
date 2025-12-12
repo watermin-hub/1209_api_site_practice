@@ -136,7 +136,8 @@ const GOODS_JSON_URL =
 
 // Supabase SQL API 로드
 const SUPABASE_URL = "https://esvmyvqpgcsmjpcnqusd.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_YtlaYb2dkhexJykX60GxTw_rORvh_W3";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzdm15dnFwZ2NzbWpwY25xdXNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzMzQwMDUsImV4cCI6MjA4MDkxMDAwNX0.2k4DFvPxzg9ch-oFK__H7N0PXcL-jJoXkf7g_ymKLaI";
 const SUPABASE_TABLE = "comments";
 
 let booksData = [];
